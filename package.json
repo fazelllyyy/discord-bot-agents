@@ -1,0 +1,25 @@
+{
+  "name": "discord-bot-agents",
+  "version": "1.0.0",
+  "description": "AI-powered Discord server management bot. Understands natural language commands to manage roles, channels, members, and moderation — with multi-provider AI fallback, background job system, and two-phase execution architecture.",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["discord-bot", "discord-server-management", "ai-bot", "moderation-bot", "natural-language-processing", "gemini", "groq", "discord-js", "server-management", "ai-agents"],
+  "author": "fazelllyyy",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@mistralai/mistralai": "^2.2.5",
+    "cohere-ai": "^8.0.0",
+    "discord.js": "^14.26.4",
+    "dotenv": "^17.4.2",
+    "groq-sdk": "^1.2.1",
+    "openai": "^6.42.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
