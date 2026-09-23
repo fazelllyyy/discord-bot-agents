@@ -1,33 +1,33 @@
+/**
+ * Split the combined prompt into system + user parts for chat APIs.
+ * Must stay in sync with separators used in src/core/ai.js.
+ */
 function splitPrompt(prompt) {
-    const separator = '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📥 USER COMMAND\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
-    const separatorIdx = prompt.indexOf(separator);
+    // Primary separator used by planActions / summarizeResults
+    const separators = [
+        '━━━ USER COMMAND ━━━',
+        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📥 USER COMMAND\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+        'USER COMMAND',
+    ];
 
-    if (separatorIdx !== -1) {
-        const systemPart = prompt.substring(0, separatorIdx).trim();
-        let userPart = prompt.substring(separatorIdx + separator.length).trim();
-        // Also strip the final reminders that come after user command
-        const reminderIdx = userPart.indexOf('⚠️ FINAL REMINDER');
-        if (reminderIdx !== -1) {
-            userPart = userPart.substring(0, reminderIdx).trim();
-        }
+    for (const separator of separators) {
+        const idx = prompt.indexOf(separator);
+        if (idx === -1) continue;
+
+        const systemPart = prompt.substring(0, idx).trim();
+        let userPart = prompt.substring(idx + separator.length).trim();
+
+        // Drop leading decorative dashes left by "━━━ USER COMMAND ━━━"
+        userPart = userPart.replace(/^━+\s*/, '').trim();
+
         return {
-            system: systemPart,
-            user: userPart
+            system: systemPart || prompt,
+            user: userPart || prompt,
         };
     }
 
-    // Fallback: try to split based on USER COMMAND
-    const altSeparator = 'USER COMMAND';
-    const altIdx = prompt.indexOf(altSeparator);
-    if (altIdx !== -1) {
-        const afterSep = prompt.substring(altIdx + altSeparator.length).trim();
-        const firstNewline = afterSep.indexOf('\n');
-        const userPart = firstNewline !== -1 ? afterSep.substring(firstNewline).trim() : afterSep;
-        const systemPart = prompt.substring(0, altIdx).trim();
-        return { system: systemPart, user: userPart };
-    }
-
-    return { system: prompt, user: '' };
+    // No separator — treat entire prompt as user content (providers that need a message)
+    return { system: '', user: prompt };
 }
 
 module.exports = { splitPrompt };

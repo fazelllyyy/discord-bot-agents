@@ -96,7 +96,7 @@ async function generateWithFallback(prompt, { maxTokens } = {}) {
                 });
                 
                 text = await Promise.race([
-                    provider.generate(prompt),
+                    provider.generate(prompt, { maxTokens }),
                     timeoutPromise
                 ]);
             } finally {

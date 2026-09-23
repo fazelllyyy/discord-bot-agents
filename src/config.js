@@ -10,42 +10,42 @@ const aiProviders = [
         type: 'gemini',
         apiKeys: collectKeys('GEMINI_API_KEY'),
         model: 'gemini-2.5-flash-lite',
-        options: { temperature: 0.0, maxOutputTokens: 4096 }
+        options: { temperature: 0.0, maxOutputTokens: 2048 }
     },
     {
         name: 'groq',
         type: 'groq',
         apiKeys: collectKeys('GROQ_API_KEY'),
         model: 'llama-3.3-70b-versatile',
-        options: { temperature: 0.0, maxOutputTokens: 4096 }
+        options: { temperature: 0.0, maxOutputTokens: 2048 }
     },
     {
         name: 'cohere',
         type: 'cohere',
         apiKeys: collectKeys('COHERE_API_KEY'),
         model: 'command-r7b-12-2024', 
-        options: { temperature: 0.0, maxOutputTokens: 4096 }
+        options: { temperature: 0.0, maxOutputTokens: 2048 }
     },
     {
         name: 'mistral',
         type: 'mistral',
         apiKeys: collectKeys('MISTRAL_API_KEY'),
         model: 'mistral-small-latest',
-        options: { temperature: 0.0, maxOutputTokens: 4096 }
+        options: { temperature: 0.0, maxOutputTokens: 2048 }
     },
     {
         name: 'cerebras',
         type: 'cerebras',
         apiKeys: collectKeys('CEREBRAS_API_KEY'),
         model: 'zai-glm-4.7',
-        options: { temperature: 0.0, maxOutputTokens: 4096 }
+        options: { temperature: 0.0, maxOutputTokens: 2048 }
     },
     {
         name: 'github',
         type: 'github',
         apiKeys: collectKeys('GITHUB_PATH_KEY'),
         model: 'gpt-4o-mini',
-        options: { temperature: 0.0, maxOutputTokens: 4096 }
+        options: { temperature: 0.0, maxOutputTokens: 2048 }
     },
     {
         name: 'cloudflare',
@@ -53,28 +53,28 @@ const aiProviders = [
         apiKeys: collectKeys('CLOUDFLARE_API_TOKEN'),
         accountIds: collectKeys('CLOUDFLARE_ACCOUNT_ID'),
         model: '@cf/meta/llama-3.1-8b-instruct-fp8',
-        options: { temperature: 0.0, maxOutputTokens: 4096 }
+        options: { temperature: 0.0, maxOutputTokens: 2048 }
     },
     {
         name: 'openrouter',
         type: 'openrouter',
         apiKeys: collectKeys('OPENROUTER_API_KEY'),
         model: 'openai/gpt-oss-120b:free',
-        options: { temperature: 0.0, maxOutputTokens: 4096 }
+        options: { temperature: 0.0, maxOutputTokens: 2048 }
     },
     {
         name: 'jina',
         type: 'jina',
         apiKeys: collectKeys('JINA_API_KEY'),
         model: 'jina-deepsearch-v1',
-        options: { temperature: 0.0, maxOutputTokens: 4096 }
+        options: { temperature: 0.0, maxOutputTokens: 2048 }
     },
     {
         name: 'cometapi',
         type: 'cometapi',
         apiKeys: collectKeys('COMETAPI_API_KEY'),
         model: 'gpt-4o-mini',
-        options: { temperature: 0.0, maxOutputTokens: 4096 }
+        options: { temperature: 0.0, maxOutputTokens: 2048 }
     }
 ];
 
@@ -103,13 +103,13 @@ module.exports = {
     missingVars,
 
     // Default language for responses if not detected
-    defaultLanguage: 'english',
+    defaultLanguage: 'en',
 
     // Bot name (automatically fetched from client.user.username, can fallback)
     botNamePlaceholder: 'AI Bot',
 
-    // Default messages
+    // Default messages (English)
     defaultGreeting: 'Hello, I am {botName}. How can I help you today?',
-    notUnderstandMessage: 'I do not understand your request. Please rephrase.',
+    notUnderstandMessage: 'I am not sure what you meant. Please rephrase your server-management request.',
     identityMessage: 'I am {botName}, an AI assistant for managing this Discord server.',
 };

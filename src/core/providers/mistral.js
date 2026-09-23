@@ -3,8 +3,8 @@ const { splitPrompt } = require('../../utils/promptSplitter');
 
 module.exports = function createMistralProvider(config) {
     const client = new Mistral({ apiKey: config.apiKey });
-    
-    return async (prompt) => {
+
+    return async (prompt, opts = {}) => {
         const { system, user } = splitPrompt(prompt);
         const messages = [];
         if (system) messages.push({ role: 'system', content: system });
@@ -15,7 +15,8 @@ module.exports = function createMistralProvider(config) {
             model: config.model,
             messages,
             temperature: config.options.temperature,
-            maxTokens: config.options.maxOutputTokens
+            maxTokens: opts.maxTokens || config.options.maxOutputTokens,
+            responseFormat: { type: 'json_object' },
         });
         return chatCompletion.choices[0].message.content;
     };

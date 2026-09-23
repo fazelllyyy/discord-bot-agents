@@ -1,33 +1,74 @@
+/**
+ * Extract a JSON object from LLM output.
+ * Handles fences, preamble text, trailing commas, and unescaped control chars in strings.
+ */
 function extractJSON(text) {
-    if (!text || typeof text !== 'string') return null;
-
-    try {
-        return JSON.parse(text);
-    } catch (e) {}
-
-    const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (match) {
-        try {
-            return JSON.parse(match[1]);
-        } catch (err) {}
+    if (text == null) return null;
+    if (typeof text !== 'string') {
+        if (typeof text === 'object') return text;
+        return null;
     }
 
-    const firstBrace = text.indexOf('{');
-    if (firstBrace === -1) return null;
+    const trimmed = text.trim();
+    if (!trimmed) return null;
 
-    try {
-        const result = extractBalancedJSON(text, firstBrace);
-        if (result) return result;
-    } catch (err) {}
+    const candidates = [];
+
+    // 1) Whole string
+    candidates.push(trimmed);
+
+    // 2) Fenced ```json ... ```
+    const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (fence) candidates.push(fence[1].trim());
+
+    // 3) Balanced object from first `{`
+    const firstBrace = trimmed.indexOf('{');
+    if (firstBrace !== -1) {
+        const balanced = sliceBalancedObject(trimmed, firstBrace);
+        if (balanced) candidates.push(balanced);
+    }
+
+    for (const candidate of candidates) {
+        const parsed = tryParseObject(candidate);
+        if (parsed) return parsed;
+    }
+
+    // 4) Last resort: pull known fields with regex (still useful for summarize replies)
+    const loose = extractLooseFields(trimmed);
+    if (loose) return loose;
 
     return null;
 }
 
-function extractBalancedJSON(text, startIdx) {
+function tryParseObject(str) {
+    if (!str || typeof str !== 'string') return null;
+
+    const attempts = [
+        str,
+        repairTrailingCommas(str),
+        repairUnescapedControls(str),
+        repairTrailingCommas(repairUnescapedControls(str)),
+        normalizeSmartQuotes(str),
+        repairTrailingCommas(repairUnescapedControls(normalizeSmartQuotes(str))),
+    ];
+
+    for (const attempt of attempts) {
+        try {
+            const parsed = JSON.parse(attempt);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                return parsed;
+            }
+        } catch {
+            /* try next */
+        }
+    }
+    return null;
+}
+
+function sliceBalancedObject(text, startIdx) {
     let depth = 0;
     let inString = false;
     let escape = false;
-    let lastValidEnd = -1;
 
     for (let i = startIdx; i < text.length; i++) {
         const ch = text[i];
@@ -59,71 +100,120 @@ function extractBalancedJSON(text, startIdx) {
         if (ch === '}') {
             depth--;
             if (depth === 0) {
-                lastValidEnd = i;
-                break;
+                return text.substring(startIdx, i + 1);
             }
         }
     }
-
-    if (lastValidEnd === -1) return null;
-
-    const jsonStr = text.substring(startIdx, lastValidEnd + 1);
-    try {
-        return JSON.parse(jsonStr);
-    } catch (e) {
-        if (jsonStr.length < 10) return null;
-        const lastGoodBrace = findLastCompleteBrace(text, startIdx, lastValidEnd);
-        if (lastGoodBrace > startIdx) {
-            try {
-                return JSON.parse(text.substring(startIdx, lastGoodBrace + 1));
-            } catch (err) {}
-        }
-        return null;
-    }
+    return null;
 }
 
-function findLastCompleteBrace(text, startIdx, endIdx) {
-    let depth = 0;
+/** Remove trailing commas before } or ] */
+function repairTrailingCommas(str) {
+    return str.replace(/,(\s*[}\]])/g, '$1');
+}
+
+/** Replace curly/smart quotes with straight quotes */
+function normalizeSmartQuotes(str) {
+    return str
+        .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
+        .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'");
+}
+
+/**
+ * Escape raw control characters that appear inside JSON string values.
+ * LLMs often emit real newlines inside "reply" instead of \n.
+ */
+function repairUnescapedControls(str) {
+    let out = '';
     let inString = false;
     let escape = false;
-    let validEnd = -1;
 
-    for (let i = startIdx; i <= endIdx; i++) {
-        const ch = text[i];
+    for (let i = 0; i < str.length; i++) {
+        const ch = str[i];
+        const code = str.charCodeAt(i);
 
         if (escape) {
+            out += ch;
             escape = false;
             continue;
         }
 
         if (inString) {
             if (ch === '\\') {
+                out += ch;
                 escape = true;
-            } else if (ch === '"') {
-                inString = false;
+                continue;
             }
+            if (ch === '"') {
+                out += ch;
+                inString = false;
+                continue;
+            }
+            if (ch === '\n') {
+                out += '\\n';
+                continue;
+            }
+            if (ch === '\r') {
+                out += '\\r';
+                continue;
+            }
+            if (ch === '\t') {
+                out += '\\t';
+                continue;
+            }
+            if (code < 0x20) {
+                out += '\\u' + code.toString(16).padStart(4, '0');
+                continue;
+            }
+            out += ch;
             continue;
         }
 
         if (ch === '"') {
             inString = true;
-            continue;
         }
-
-        if (ch === '{') {
-            depth++;
-            continue;
-        }
-
-        if (ch === '}') {
-            depth--;
-            if (depth === 0) {
-                validEnd = i;
-            }
-        }
+        out += ch;
     }
 
-    return validEnd;
+    return out;
+}
+
+/**
+ * Best-effort field extraction when JSON is too broken to parse.
+ * Only used as a last resort for summarize-phase replies.
+ */
+function extractLooseFields(text) {
+    const reply = matchJsonStringField(text, 'reply');
+    if (reply == null) return null;
+
+    const result = {
+        reply,
+        reasoning: matchJsonStringField(text, 'reasoning') || '',
+        replyFormat: matchJsonStringField(text, 'replyFormat') || 'text',
+        imageUrl: matchJsonStringField(text, 'imageUrl'),
+        colorHex: matchJsonStringField(text, 'colorHex') || '#2B2D31',
+        imageStyle: matchJsonStringField(text, 'imageStyle') || null,
+    };
+
+    if (result.imageUrl === 'null') result.imageUrl = null;
+    return result;
+}
+
+function matchJsonStringField(text, field) {
+    const re = new RegExp(`"${field}"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"`, 's');
+    const m = text.match(re);
+    if (!m) {
+        // Try with unescaped newlines inside the value (broken JSON)
+        const loose = new RegExp(`"${field}"\\s*:\\s*"([\\s\\S]*?)"\\s*[,}]`);
+        const m2 = text.match(loose);
+        if (!m2) return null;
+        return m2[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+    }
+    try {
+        return JSON.parse('"' + m[1] + '"');
+    } catch {
+        return m[1];
+    }
 }
 
 module.exports = { extractJSON };

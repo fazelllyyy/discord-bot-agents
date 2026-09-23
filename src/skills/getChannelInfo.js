@@ -1,23 +1,15 @@
-const { findClosest } = require('../utils/fuzzyMatch');
+const { findChannel } = require('../utils/fuzzyMatch');
 
 module.exports = {
     name: 'getChannelInfo',
-    description: 'Fetches information about a specific channel.',
+    description: 'Fetches information about a specific channel. Accepts channel mention (<#ID>), #name, raw ID, or plain name.',
     params: {
-        channelName: 'string - The name or mention of the channel to inspect.'
+        channelName: 'string - Channel mention (<#ID>), #name, raw snowflake ID, or plain name. Prefer passing Discord mentions exactly as in the user message.'
     },
 
     async fetchRaw(guild, message, params = {}) {
         if (!params.channelName) return null;
-        let channel = findClosest(guild.channels.cache, params.channelName);
-        
-        if (!channel) {
-            const idMatch = params.channelName.match(/<[#@&!]+(\d+)>/);
-            const rawId = idMatch ? idMatch[1] : (/^\d+$/.test(params.channelName) ? params.channelName : null);
-            if (rawId) {
-                channel = await guild.channels.fetch(rawId).catch(() => null);
-            }
-        }
+        const channel = await findChannel(guild, params.channelName);
         if (!channel) return null;
 
         const channelTypes = {
@@ -40,17 +32,11 @@ module.exports = {
     },
 
     async execute(guild, params, message) {
-        const data = await this.fetchRaw(guild, message, params);
-        if (!data) throw new Error(`I couldn't find a channel called "${params.channelName}" here.`);
-        
-        let channel = findClosest(guild.channels.cache, params.channelName);
+        const channel = await findChannel(guild, params.channelName);
         if (!channel) {
-            const idMatch = params.channelName.match(/<[#@&!]+(\d+)>/);
-            const rawId = idMatch ? idMatch[1] : (/^\d+$/.test(params.channelName) ? params.channelName : null);
-            if (rawId) {
-                channel = await guild.channels.fetch(rawId).catch(() => null);
-            }
+            throw new Error(`I couldn't find a channel matching "${params.channelName}" in this server.`);
         }
+
         if (channel.nsfw && !message.channel.nsfw) {
             throw new Error(`You can't look up info on the age-restricted channel "${channel.name}" from a non-NSFW channel.`);
         }
@@ -61,6 +47,8 @@ module.exports = {
                 throw new Error(`You don't have permission to view info about ${channel.name}.`);
             }
         }
+
+        const data = await this.fetchRaw(guild, message, params);
 
         return `**Channel Information: ${data.name}**
 - **Mention:** ${data.mention}

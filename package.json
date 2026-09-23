@@ -1,10 +1,11 @@
 {
   "name": "discord-bot-agents",
   "version": "1.0.0",
-  "description": "AI-powered Discord server management bot. Understands natural language commands to manage roles, channels, members, and moderation — with multi-provider AI fallback, background job system, and two-phase execution architecture.",
+  "description": "AI-powered Discord server management agent. Natural-language plan → execute skills → summarize, with multi-provider failover and mention-safe entity resolution.",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/index.js"
   },
   "keywords": ["discord-bot", "discord-server-management", "ai-bot", "moderation-bot", "natural-language-processing", "gemini", "groq", "discord-js", "server-management", "ai-agents"],
   "author": "fazelllyyy",

@@ -2,8 +2,8 @@ const { splitPrompt } = require('../../utils/promptSplitter');
 
 module.exports = function createCloudflareProvider(config) {
     const { accountId, apiKey, model } = config;
-    
-    return async (prompt) => {
+
+    return async (prompt, opts = {}) => {
         const { system, user } = splitPrompt(prompt);
         const messages = [];
         if (system) messages.push({ role: 'system', content: system });
@@ -15,13 +15,13 @@ module.exports = function createCloudflareProvider(config) {
             {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Content-Type': 'application/json'
+                    Authorization: `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     messages,
-                    max_tokens: config.options.maxOutputTokens
-                })
+                    max_tokens: opts.maxTokens || config.options.maxOutputTokens,
+                }),
             }
         );
 

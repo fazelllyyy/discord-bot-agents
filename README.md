@@ -1,228 +1,85 @@
 # Discord Bot Agents
 
-An intelligent Discord server management bot powered by multiple LLM providers. Understands natural language (English, Indonesian, and more) to manage channels, roles, members, emojis, invites, and server settings — autonomously.
+An intelligent Discord server-management **agent**. Understands natural language (any language), plans skills, executes them on Discord, then replies naturally from real results.
+
+## Architecture (intelligence-first)
+
+```
+@Bot <request>   ← single standalone request (no chat memory)
+        │
+        ▼
+ 1. PLAN      (1× LLM)  — understand FULL intent, including multi-part / ambiguous
+ 2. EXECUTE   (Discord) — run all planned skills
+ 3. SUMMARIZE (1× LLM)  — reply in the user's language from real results
+```
+
+Typically **2 LLM calls** per command. Empty `@Bot` mention alone skips the LLM.
+
+Why not 1 call? A model cannot both choose tools and write a grounded reply *after* seeing skill outcomes. Multi-intent (“who are you + list channels”) needs both phases.
+
+| Layer | Path | Role |
+|---|---|---|
+| Discord adapter | `src/handler/messageHandler.js` | Mentions, cooldown, render |
+| Agent | `src/agent/` | plan → execute → summarize |
+| Skills | `src/skills/` | Discord actions (34 skills) |
+| Providers | `src/core/providers/` | Gemini, Groq, Cohere, … + failover |
+| Entity resolve | `src/utils/fuzzyMatch.js` | `#channel` / `@user` mentions, IDs, names |
 
 ## Features
 
-- **Natural Language Commands** — "buat channel #general", "kick @user", "info server" — the bot understands intent and executes actions.
-- **Two-Phase AI Architecture** — The AI first plans what actions to take (Phase 1: Plan), executes them, then crafts an accurate reply based on what actually happened (Phase 2: Summarize). No more optimistic replies.
-- **Multi-Provider with Auto-Failover** — 10+ AI providers configured in priority order. If one fails (rate limit, timeout, outage), the next provider is automatically used. Round-robin load balancing spreads requests across providers.
-- **34 Built-in Skills** — Channel management (create, delete, edit), role management (create, delete, edit, assign), member management (kick, ban, timeout, mute, deafen, move), message management (purge, send), emoji management, invite management, server info queries, and more.
-- **Context-Aware** — Pre-fetches Discord server data before calling the AI, giving it full context about channels, roles, and members to minimize hallucinations.
-- **Language Adaptive** — Automatically detects and replies in Indonesian, English, Arabic, Japanese, Russian, German, Spanish, French, Chinese, Korean, Portuguese.
-- **Rich UI** — Uses Discord Components V2 for paginated lists, embeds with thumbnails, and media galleries.
-- **Multi-Layer Safety** — AI-level validation rules, Discord permission checks, role hierarchy enforcement, rate limiting, 14-day message age enforcement, owner protection, self-moderation prevention.
-- **Background Jobs** — Mass operations (e.g. add role to all members) run asynchronously with progress updates, retry logic, and timeout protection.
+- **Multi-intent & ambiguous requests** — planner covers every valid part of the message
+- **Language-aware replies** — matches the user; English only when ambiguous
+- **Mention-safe parsing** — Discord autocomplete (`<#ID>`, `<@ID>`), `#name`, raw IDs, and plain names
+- **34 built-in skills** — channels, roles, members, moderation, emojis, invites, info queries, …
+- **Multi-provider failover** — free-tier keys with automatic fallback and round-robin
+- **Components V2 UIs** — paginated lists and rich layouts
+- **Safety** — permission checks, hierarchy, owner protection, rate limits
 
 ## Supported AI Providers
 
-| Provider | Type | Free Tier | Config Key | Get Key |
-|---|---|---|---|---|
-| Google Gemini | `gemini` | ✅ | `GEMINI_API_KEY` | [AI Studio](https://aistudio.google.com/api-keys) |
-| Groq | `groq` | ✅ | `GROQ_API_KEY` | [Groq Console](https://console.groq.com/keys) |
-| Cohere | `cohere` | ✅ | `COHERE_API_KEY` | [Cohere Dashboard](https://dashboard.cohere.com/api-keys) |
-| Mistral AI | `mistral` | ✅ | `MISTRAL_API_KEY` | [Mistral Console](https://console.mistral.ai) |
-| Cerebras | `cerebras` | ✅ | `CEREBRAS_API_KEY` | [Cerebras Cloud](https://cloud.cerebras.ai) |
-| OpenRouter | `openrouter` | ✅ (some models) | `OPENROUTER_API_KEY` | [OpenRouter Keys](https://openrouter.ai/keys) |
-| Cloudflare Workers AI | `cloudflare` | ✅ | `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` | [Cloudflare Dashboard](https://dash.cloudflare.com) |
-| Jina AI | `jina` | ✅ | `JINA_API_KEY` | [Jina AI](https://jina.ai) |
-| Comet API | `cometapi` | ✅ | `COMETAPI_API_KEY` | [CometAPI Token](https://api.cometapi.com/console/token) |
-| GitHub Models | `github` | ✅ | `GITHUB_PATH_KEY` | [GitHub Models](https://github.com/marketplace/models) |
+| Provider | Env key(s) |
+|---|---|
+| Google Gemini | `GEMINI_API_KEY` |
+| Groq | `GROQ_API_KEY` |
+| Cohere | `COHERE_API_KEY` |
+| Mistral | `MISTRAL_API_KEY` |
+| Cerebras | `CEREBRAS_API_KEY` |
+| OpenRouter | `OPENROUTER_API_KEY` |
+| Cloudflare Workers AI | `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` |
+| Jina | `JINA_API_KEY` |
+| Comet API | `COMETAPI_API_KEY` |
+| GitHub Models | `GITHUB_PATH_KEY` |
 
-Only one provider key is needed to run the bot. Providers are tried in priority order (defined in `src/config.js`) with automatic fallback.
+Only **one** provider key is required. Priority order lives in `src/config.js`.
 
-## Installation
-
-### Prerequisites
-
-- Node.js 18+
-- npm
-- A Discord bot token ([Discord Developer Portal](https://discord.com/developers/applications))
-- At least one AI provider API key
-
-### Setup
+## Setup
 
 ```bash
-# Clone the repository
 git clone https://github.com/fazelllyyy/discord-bot-agents.git
 cd discord-bot-agents
-
-# Install dependencies
 npm install
-
-# Copy environment config
 cp .env.example .env
 ```
-
-Edit `.env` with your Discord bot token and at least one AI provider key:
 
 ```env
 DISCORD_TOKEN=your_discord_bot_token
 BOT_NAME=My Bot
-
-# At least one AI provider key
-GEMINI_API_KEY=your_gemini_api_key
+GEMINI_API_KEY=your_key_here
 ```
-
-Start the bot:
 
 ```bash
-node src/index.js
+npm start
 ```
+
+Requires Node.js 18+, a Discord bot token, and Message Content Intent enabled.
 
 ## Usage
 
-Mention the bot in any channel it can see, followed by your command:
-
 ```
-@Bot buat channel #general
-@Bot timeout @user 10 menit karena spam
-@Bot kick @user
-@Bot list semua role
-@Bot kasih role VIP ke @fazel
-@Bot siapa pemilik server ini?
-@Bot clear 50 pesan di #chat
-@Bot pindah @user ke Voice General
+@Bot siapa kamu? dan berikan list channel dalam server ini
+@Bot create a red VIP role and give it to @user
+@Bot jenis apa channel #general
+@Bot timeout @user 10 minutes for spam
 ```
 
-### Multi-Step Commands
-
-The bot can handle multiple actions in one request:
-
-```
-@Bot buat channel #rules dan kirim pesan selamat datang
-@Bot buat role VIP warna merah dan kasih ke @fazel
-@Bot mute @user1, deafen @user2, timeout @user3 5m
-```
-
-## Architecture
-
-```
-User @mention bot →
-  │
-  ├─ Pre-fetch: Gather Discord data (channels, roles, members)
-  │
-  ├─ Phase 1 — PLAN
-  │   AI analyzes input, validates scope/permissions,
-  │   determines actions → { reasoning, actions[] }
-  │
-  ├─ Execute: Run all actions sequentially (with validation)
-  │
-  ├─ Phase 2 — SUMMARIZE
-  │   AI reviews actual execution results,
-  │   crafts an accurate reply → { reply, format }
-  │
-  └─ Render: Send reply to Discord (text, embed, or CV2)
-```
-
-### Why Two-Phase?
-
-| Aspect | 1-Phase (old) | 2-Phase (current) |
-|---|---|---|
-| LLM calls | 1 | 1-2 |
-| Reply accuracy | Low (optimistic) | High (factual) |
-| Error handling | Appended after reply | Built into reply |
-| Self-correction | None | Reply reflects actual results |
-| Prompt size | Very large | Split across phases |
-
-## Project Structure
-
-```
-src/
-├── index.js                    # Entry point — Discord client
-├── config.js                   # Provider config, defaults, key collection
-├── handler/
-│   └── messageHandler.js       # Orchestrator: pre-fetch → Plan → Execute → Summarize → Render
-├── core/
-│   ├── ai.js                   # Phase 1 (planActions) + Phase 2 (summarizeResults)
-│   ├── providerManager.js      # Multi-provider fallback + round-robin
-│   └── providers/              # 12 individual AI provider adapters
-├── skills/                     # 34 action/query modules
-│   ├── index.js                # Skill registry + definitions for AI prompt
-│   ├── addRoleToMember.js
-│   ├── blockMember.js
-│   ├── clearMessages.js
-│   ├── createChannel.js
-│   ├── createEmoji.js
-│   ├── createInvite.js
-│   ├── createRole.js
-│   ├── deafenMember.js
-│   ├── deleteChannel.js
-│   ├── deleteEmoji.js
-│   ├── deleteInvite.js
-│   ├── deleteRole.js
-│   ├── editChannel.js
-│   ├── editEmoji.js
-│   ├── editRole.js
-│   ├── editServer.js
-│   ├── getChannelInfo.js
-│   ├── getRoleInfo.js
-│   ├── getServerInfo.js
-│   ├── getSnipe.js
-│   ├── getUserInfo.js
-│   ├── listChannels.js
-│   ├── listEmojis.js
-│   ├── listInvites.js
-│   ├── listRoles.js
-│   ├── moveMember.js
-│   ├── muteMember.js
-│   ├── removeMember.js
-│   ├── removeRoleFromMember.js
-│   ├── searchServer.js
-│   ├── sendMessage.js
-│   ├── setNickname.js
-│   ├── timeoutMember.js
-│   └── unblockMember.js
-└── utils/                      # Helpers
-    ├── errorMapper.js          # Discord API error → user-friendly message
-    ├── fuzzyMatch.js           # Fuzzy channel/role name matching
-    ├── jobManager.js           # Background mass job execution
-    ├── jsonHelper.js           # Resilient JSON extraction from AI output
-    └── retry.js                # Exponential backoff with timeout
-```
-
-## Available Skills
-
-| Category | Skills |
-|---|---|
-| Channels | createChannel, deleteChannel, editChannel, listChannels, getChannelInfo |
-| Roles | createRole, deleteRole, editRole, listRoles, getRoleInfo |
-| Members | removeMember (kick), blockMember (ban), unblockMember, timeoutMember, setNickname, muteMember, deafenMember, moveMember, addRoleToMember, removeRoleFromMember |
-| Messages | clearMessages (purge), sendMessage, getSnipe |
-| Emojis | createEmoji, editEmoji, deleteEmoji, listEmojis |
-| Invites | createInvite, deleteInvite, listInvites |
-| Server | getServerInfo, editServer, searchServer |
-| Users | getUserInfo |
-
-## Configuration
-
-Edit `src/config.js` to:
-
-- Change provider priority order (providers are tried from top to bottom)
-- Adjust `maxOutputTokens` and `temperature` per provider
-- Set default language and greeting messages at the bottom of the file
-
-### Provider Rotation
-
-Providers support multiple API keys for load balancing and failover. To add a secondary key, append `_1` suffix to the environment variable (e.g. `GEMINI_API_KEY_1`). The system distributes requests across available keys in round-robin order automatically.
-
-## Safety & Limitations
-
-- **Rate Limited**: 2-second cooldown between commands per user
-- **Max 5 Actions**: Complex requests are split into at most 5 actions
-- **Mass Action Cap**: Background jobs process at most 50 items
-- **Message Age**: Cannot delete messages older than 14 days (Discord API limit)
-- **Hierarchy Enforced**: Cannot moderate users with roles at or above the bot's highest role
-- **Owner Protected**: Cannot kick, ban, or timeout the server owner
-- **Self-Moderation Blocked**: Cannot kick, ban, or timeout yourself
-- **Admin Roles**: Cannot assign or edit Administrator roles (owner-only for security)
-- **14-Day Edit Limit**: Discord blocks editing messages older than 14 days
-- **Format Limitation**: Reply uses exactly one format (text or embed) — split-format requests are not supported
-
-## Contributing
-
-Contributions are welcome! Feel free to open issues or submit pull requests.
-
-## License
-
-MIT — see [LICENSE](LICENSE) for details.
+Each `@Bot` message is a **standalone** request (no conversation memory) — predictable and quota-friendly on free API keys.

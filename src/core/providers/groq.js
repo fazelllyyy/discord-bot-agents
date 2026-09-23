@@ -3,7 +3,7 @@ const { splitPrompt } = require('../../utils/promptSplitter');
 
 module.exports = function createGroqProvider(config) {
     const groq = new Groq({ apiKey: config.apiKey });
-    return async (prompt) => {
+    return async (prompt, opts = {}) => {
         const { system, user } = splitPrompt(prompt);
         const messages = [];
         if (system) messages.push({ role: 'system', content: system });
@@ -14,7 +14,8 @@ module.exports = function createGroqProvider(config) {
             messages,
             model: config.model,
             temperature: config.options.temperature,
-            max_tokens: config.options.maxOutputTokens
+            max_tokens: opts.maxTokens || config.options.maxOutputTokens,
+            response_format: { type: 'json_object' },
         });
         return chatCompletion.choices[0].message.content;
     };

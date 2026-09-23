@@ -4,10 +4,10 @@ const { splitPrompt } = require('../../utils/promptSplitter');
 module.exports = function createGithubProvider(config) {
     const openai = new OpenAI({
         baseURL: 'https://models.inference.ai.azure.com',
-        apiKey: config.apiKey
+        apiKey: config.apiKey,
     });
-    
-    return async (prompt) => {
+
+    return async (prompt, opts = {}) => {
         const { system, user } = splitPrompt(prompt);
         const messages = [];
         if (system) messages.push({ role: 'system', content: system });
@@ -18,7 +18,7 @@ module.exports = function createGithubProvider(config) {
             messages,
             model: config.model,
             temperature: config.options.temperature,
-            max_tokens: config.options.maxOutputTokens
+            max_tokens: opts.maxTokens || config.options.maxOutputTokens,
         });
         return chatCompletion.choices[0].message.content;
     };

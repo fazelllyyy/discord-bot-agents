@@ -6,12 +6,12 @@ module.exports = function createOpenRouterProvider(config) {
         baseURL: 'https://openrouter.ai/api/v1',
         apiKey: config.apiKey,
         defaultHeaders: {
-            "HTTP-Referer": "https://github.com/fazelllyyy/discord-bot-agents",
-            "X-Title": "Discord Bot Agents",
-        }
+            'HTTP-Referer': 'https://github.com/fazelllyyy/discord-bot-agents',
+            'X-Title': 'Discord Bot Agents',
+        },
     });
-    
-    return async (prompt) => {
+
+    return async (prompt, opts = {}) => {
         const { system, user } = splitPrompt(prompt);
         const messages = [];
         if (system) messages.push({ role: 'system', content: system });
@@ -22,7 +22,7 @@ module.exports = function createOpenRouterProvider(config) {
             messages,
             model: config.model,
             temperature: config.options.temperature,
-            max_tokens: config.options.maxOutputTokens
+            max_tokens: opts.maxTokens || config.options.maxOutputTokens,
         });
         return chatCompletion.choices[0].message.content;
     };
