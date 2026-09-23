@@ -9,14 +9,14 @@ const aiProviders = [
         name: 'gemini',
         type: 'gemini',
         apiKeys: collectKeys('GEMINI_API_KEY'),
-        model: 'gemini-2.5-flash-lite',
+        model: 'gemini-3.1-flash-lite',
         options: { temperature: 0.0, maxOutputTokens: 2048 }
     },
     {
         name: 'groq',
         type: 'groq',
         apiKeys: collectKeys('GROQ_API_KEY'),
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-20b',
         options: { temperature: 0.0, maxOutputTokens: 2048 }
     },
     {
@@ -30,23 +30,24 @@ const aiProviders = [
         name: 'mistral',
         type: 'mistral',
         apiKeys: collectKeys('MISTRAL_API_KEY'),
-        model: 'mistral-small-latest',
+        model: 'ministral-3b-latest',
         options: { temperature: 0.0, maxOutputTokens: 2048 }
     },
     {
         name: 'cerebras',
         type: 'cerebras',
         apiKeys: collectKeys('CEREBRAS_API_KEY'),
-        model: 'zai-glm-4.7',
+        model: 'gpt-oss-120b',
         options: { temperature: 0.0, maxOutputTokens: 2048 }
     },
-    {
-        name: 'github',
-        type: 'github',
-        apiKeys: collectKeys('GITHUB_PATH_KEY'),
-        model: 'gpt-4o-mini',
-        options: { temperature: 0.0, maxOutputTokens: 2048 }
-    },
+    // NOTE: GitHub Models service was retired on July 30, 2026 — provider disabled.
+    // {
+    //     name: 'github',
+    //     type: 'github',
+    //     apiKeys: collectKeys('GITHUB_PATH_KEY'),
+    //     model: 'gpt-4o-mini',
+    //     options: { temperature: 0.0, maxOutputTokens: 2048 }
+    // },
     {
         name: 'cloudflare',
         type: 'cloudflare',
@@ -59,7 +60,7 @@ const aiProviders = [
         name: 'openrouter',
         type: 'openrouter',
         apiKeys: collectKeys('OPENROUTER_API_KEY'),
-        model: 'openai/gpt-oss-120b:free',
+        model: 'google/gemma-4-31b-it:free',
         options: { temperature: 0.0, maxOutputTokens: 2048 }
     },
     {
@@ -73,7 +74,7 @@ const aiProviders = [
         name: 'cometapi',
         type: 'cometapi',
         apiKeys: collectKeys('COMETAPI_API_KEY'),
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-nano',
         options: { temperature: 0.0, maxOutputTokens: 2048 }
     }
 ];
